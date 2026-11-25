@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blood Donor Finder with Machine Learning</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;800&family=Hanken+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf3f1;--card:#ffffff;--ink:#2b0d14;--mute:#715258;--red:#b3122e;--redt:#ffffff;--soft:#f6dcd9;--ok:#1d7a46;--no:#8a5a00;--line:#e6c9c5;
+--d:'Sora','Trebuchet MS',system-ui,sans-serif;--b:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a0c10;--card:#27141a;--ink:#f8e9e7;--mute:#c4a2a7;--red:#ff5b73;--redt:#2b0d14;--soft:#3b1b23;--ok:#58d08a;--no:#f0b44a;--line:#4a2a32;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1a0c10;--card:#27141a;--ink:#f8e9e7;--mute:#c4a2a7;--red:#ff5b73;--redt:#2b0d14;--soft:#3b1b23;--ok:#58d08a;--no:#f0b44a;--line:#4a2a32;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 17px/1.55 var(--b)}
+:focus-visible{outline:3px solid var(--red);outline-offset:3px;border-radius:6px}
+.wrap{max-width:900px;margin:0 auto;padding:0 20px 60px}
+header{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
+header b{font:800 19px var(--d)}
+.mode{font:inherit;background:none;color:var(--mute);border:1.5px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+h1{font:800 clamp(32px,6.4vw,58px)/1.02 var(--d);letter-spacing:-.03em;margin:14px 0 12px}
+.lead{color:var(--mute);max-width:52ch;margin:0 0 26px}
+h2{font:800 22px var(--d);margin:0 0 6px}
+.panel{background:var(--card);border:2px solid var(--ink);border-radius:18px;padding:22px;margin-bottom:22px}
+.groups{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 18px}
+.g{aspect-ratio:1/1.05;border:2px solid var(--ink);background:var(--card);color:var(--ink);border-radius:50% 50% 50% 50%/62% 62% 38% 38%;font:800 clamp(20px,4.6vw,30px) var(--d);cursor:pointer;display:grid;place-items:center;transition:transform .12s,background .12s}
+.g:hover{transform:translateY(-3px)}
+.g[aria-pressed="true"]{background:var(--red);color:var(--redt);border-color:var(--red)}
+.g.ok{background:var(--soft)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:grid;gap:6px;font-weight:700;font-size:15px}
+select,input{font:inherit;color:var(--ink);background:var(--card);border:2px solid var(--ink);border-radius:10px;padding:11px 12px;width:100%}
+.hint{color:var(--mute);font-size:15px;margin:14px 0 0}
+.res{display:grid;gap:12px;margin-top:6px}
+.don{display:grid;grid-template-columns:62px 1fr auto;gap:14px;align-items:center;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:14px}
+.don .bg{width:62px;height:66px;border-radius:50% 50% 50% 50%/62% 62% 38% 38%;background:var(--red);color:var(--redt);display:grid;place-items:center;font:800 22px var(--d)}
+.don h3{margin:0;font:800 18px var(--d)}
+.meta{color:var(--mute);font-size:15px}
+.st{font-weight:700;font-size:14px}.st.a{color:var(--ok)}.st.w{color:var(--no)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{display:inline-block;font:700 15px var(--b);padding:10px 15px;border-radius:10px;border:2px solid var(--ink);background:var(--card);color:var(--ink);text-decoration:none;cursor:pointer}
+.btn.p{background:var(--red);border-color:var(--red);color:var(--redt)}
+.empty{padding:22px;border:2px dashed var(--line);border-radius:14px;color:var(--mute)}
+.share{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.sample{font-size:13px;color:var(--mute)}
+@media (max-width:600px){.row{grid-template-columns:1fr}.don{grid-template-columns:54px 1fr}.don .acts{grid-column:1/-1;justify-content:flex-start}.don .bg{width:54px;height:58px;font-size:19px}}
+@media (prefers-reduced-motion:reduce){.g{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><b>Blood Donor Finder</b><button class="mode" id="mode" type="button">Switch theme</button></header>
+<h1>Need blood fast? Find a donor in your city.</h1>
+<p class="lead">Pick the patient’s blood group and your city. You’ll see donors who can give to that group, with a call or WhatsApp button.</p>
+
+<section class="panel" aria-labelledby="f">
+  <h2 id="f">Find donors</h2>
+  <div class="groups" id="groups" role="group" aria-label="Patient blood group"></div>
+  <div class="row">
+    <label>City<select id="city"></select></label>
+    <label>Show<select id="avail"><option value="all">All donors</option><option value="yes">Available now only</option></select></label>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px"><button class="btn" id="near" type="button">Use my location</button><span class="meta" id="nearmsg" role="status"></span></div>
+  <p class="hint" id="hint">Choose the patient’s blood group above.</p>
+</section>
+
+<section aria-live="polite"><div class="res" id="res"></div>
+  <div class="share"><button class="btn p" id="share" type="button" hidden>Share this blood request</button></div>
+</section>
+
+<section class="panel" style="margin-top:30px" aria-labelledby="r">
+  <h2 id="r">Become a donor</h2>
+  <p class="meta" style="margin:0 0 14px">Your details are saved on this device only in this demo.</p>
+  <form id="reg">
+    <div class="row">
+      <label>Name<input id="rn" required autocomplete="name"></label>
+      <label>Phone<input id="rp" type="tel" required inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number"></label>
+      <label>Blood group<select id="rg" required></select></label>
+      <label>City<select id="rc" required></select></label>
+    </div>
+    <label style="margin-top:12px">Last donated (leave empty if never)<input id="rd" type="date"></label>
+    <label style="margin-top:12px">Past donations (number)<input id="rk" type="number" min="0" max="50" value="0"></label>
+    <p class="hint">You show as available 90 days after your last donation.</p>
+    <button class="btn p" type="submit" style="margin-top:12px">Add me as a donor</button>
+  </form>
+  <p class="sample" id="saved" role="status"></p>
+</section>
+<section class="panel" aria-labelledby="ml"><h2 id="ml">How the machine learning ranking works</h2>
+  <p class="meta" style="margin:0 0 10px">Every donor card shows the predicted <b>chance of a reply</b>. A logistic regression model, trained in Python with scikit-learn, uses six facts: days since the last donation, past donations, distance, exact blood group match, night time request and 90-day eligibility. Available donors are ranked first, then by this chance.</p>
+  <p class="meta" style="margin:0">Test results: accuracy <b>80.2%</b>, precision <b>76.5%</b>, recall <b>97.8%</b>, ROC-AUC <b>0.84</b>. The model was trained on <b>synthetic data</b> (4,000 examples) because no real donor history exists yet.</p></section>
+<p class="sample">The first six donors are sample data with fake numbers, so you can try the search.</p>
+</div>
+<script>
+(function(){
+var G=['O−','O+','A−','A+','B−','B+','AB−','AB+'];
+var CITIES=['Theni','Madurai','Chennai','Coimbatore','Trichy','Salem'];
+/* who can give to whom (donor group -> recipients) */
+var GIVE={'O−':G,'O+':['O+','A+','B+','AB+'],'A−':['A−','A+','AB−','AB+'],'A+':['A+','AB+'],'B−':['B−','B+','AB−','AB+'],'B+':['B+','AB+'],'AB−':['AB−','AB+'],'AB+':['AB+']};
+function ago(d){var x=new Date();x.setDate(x.getDate()-d);return x.toISOString().slice(0,10)}
+var SAMPLE=[
+ {k:6,n:'Arun K',g:'O+',c:'Theni',p:'9000000001',d:ago(200)},
+ {k:2,n:'Meena S',g:'A+',c:'Theni',p:'9000000002',d:ago(30)},
+ {k:9,n:'Karthik R',g:'B+',c:'Madurai',p:'9000000003',d:''},
+ {k:4,n:'Divya P',g:'O−',c:'Chennai',p:'9000000004',d:ago(120)},
+ {k:3,n:'Suresh M',g:'AB+',c:'Coimbatore',p:'9000000005',d:ago(45)},
+ {k:0,n:'Nisha T',g:'A−',c:'Theni',p:'9000000006',d:ago(95)}];
+var MODEL={"intercept": 0.29530883219443144, "mean": [236.4815625, 3.010625, 55.28225000000002, 0.3284375, 0.3090625, 0.824375], "scale": [128.32068582289733, 1.753713804865264, 39.61008249092017, 0.4696448749787045, 0.46210699095961116, 0.3805008007547375], "coef": [-0.1331594477848537, 0.17488451697229818, -0.4288238290348678, 0.1314882283665421, -0.32586843773089086, 1.7958982105885382]};
+var COORD={Theni:[10.0104,77.4768],Madurai:[9.9252,78.1198],Chennai:[13.0827,80.2707],Coimbatore:[11.0168,76.9558],Trichy:[10.7905,78.7047],Salem:[11.6643,78.146]};
+var pos=null;
+function dist(c){var a=COORD[c];if(!pos||!a)return null;var R=6371,r=Math.PI/180,dy=(a[0]-pos[0])*r,dx=(a[1]-pos[1])*r,s=Math.sin(dy/2)*Math.sin(dy/2)+Math.cos(pos[0]*r)*Math.cos(a[0]*r)*Math.sin(dx/2)*Math.sin(dx/2);return 2*R*Math.asin(Math.sqrt(s))}
+function chance(d,city){var days=d.d?Math.min(400,Math.max(0,Math.round((Date.now()-new Date(d.d).getTime())/864e5))):400,hr=new Date().getHours(),km=dist(d.c);if(km===null)km=(city!=='All cities')?0:40;
+  var x=[days,d.k||0,Math.min(300,km),d.g===sel?1:0,(hr>=22||hr<6)?1:0,days>=90?1:0],z=MODEL.intercept;for(var i=0;i<6;i++)z+=(x[i]-MODEL.mean[i])/MODEL.scale[i]*MODEL.coef[i];return Math.round(100/(1+Math.exp(-z)))}
+var mine=[];
+try{mine=JSON.parse(localStorage.getItem('bdf_donors')||'[]')}catch(e){mine=[]}
+var sel='',$=function(i){return document.getElementById(i)};
+function opts(el,list,ph){el.innerHTML=(ph?'<option value="">'+ph+'</option>':'')+list.map(function(x){return '<option>'+x+'</option>'}).join('')}
+opts($('city'),['All cities'].concat(CITIES));opts($('rg'),G,'Select');opts($('rc'),CITIES,'Select');
+var gw=$('groups');
+G.forEach(function(g){var b=document.createElement('button');b.type='button';b.className='g';b.textContent=g;b.setAttribute('aria-pressed','false');b.onclick=function(){sel=(sel===g?'':g);render()};gw.appendChild(b)});
+function avail(d){if(!d)return {ok:true,t:'Available now'};var days=Math.floor((Date.now()-new Date(d).getTime())/864e5);return days>=90?{ok:true,t:'Available now'}:{ok:false,t:'Can donate again in '+(90-days)+' days'}}
+function render(){
+  var btns=gw.children;
+  for(var i=0;i<btns.length;i++){btns[i].setAttribute('aria-pressed',String(G[i]===sel));btns[i].classList.toggle('ok',!!sel&&GIVE[G[i]].indexOf(sel)>-1&&G[i]!==sel)}
+  var res=$('res'),city=$('city').value,only=$('avail').value==='yes';
+  $('share').hidden=!sel;
+  if(!sel){$('hint').textContent='Choose the patient’s blood group above.';res.innerHTML='';return}
+  var okg=G.filter(function(g){return GIVE[g].indexOf(sel)>-1});
+  $('hint').textContent='Patient needs '+sel+'. These groups can give: '+okg.join(', ')+'. Ranked by predicted chance of a reply (machine learning).';
+  var all=SAMPLE.concat(mine).filter(function(d){return okg.indexOf(d.g)>-1&&(city==='All cities'||d.c===city)&&(!only||avail(d.d).ok)});
+  all.forEach(function(d){d.sc=chance(d,city)});all.sort(function(a,b){return (avail(b.d).ok-avail(a.d).ok)||(b.sc-a.sc)});
+  if(!all.length){res.innerHTML='<div class="empty">No donors found for '+sel+(city!=='All cities'?' in '+city:'')+'. Try all cities, or share the request so others can respond.</div>';return}
+  res.innerHTML='';
+  all.forEach(function(d){
+    var a=avail(d.d),el=document.createElement('div');el.className='don';
+    var bg=document.createElement('div');bg.className='bg';bg.textContent=d.g;
+    var mid=document.createElement('div');
+    var h=document.createElement('h3');h.textContent=d.n;
+    var m=document.createElement('div');m.className='meta';m.textContent=d.c+(d.g===sel?' · exact match':'');
+    var s=document.createElement('div');s.className='st '+(a.ok?'a':'w');s.textContent=a.t;
+    var cr=document.createElement('div');cr.className='meta';cr.textContent='Chance of reply: '+d.sc+'%';mid.append(h,m,s,cr);
+    var ac=document.createElement('div');ac.className='acts';
+    var c=document.createElement('a');c.className='btn p';c.href='tel:+91'+d.p;c.textContent='Call';
+    var w=document.createElement('a');w.className='btn';w.target='_blank';w.rel='noopener';w.href='https://wa.me/91'+d.p+'?text='+encodeURIComponent('Hello '+d.n+', we urgently need '+sel+' blood in '+(city==='All cities'?d.c:city)+'. Can you help?');w.textContent='WhatsApp';
+    ac.append(c,w);el.append(bg,mid,ac);res.appendChild(el);
+  });
+}
+$('near').onclick=function(){var m=$('nearmsg');if(!navigator.geolocation){m.textContent='Location is not available.';return}m.textContent='...';navigator.geolocation.getCurrentPosition(function(p){pos=[p.coords.latitude,p.coords.longitude];m.textContent='Using your location';render()},function(){m.textContent='Allow location to rank by distance.'},{timeout:10000})};
+$('city').onchange=render;$('avail').onchange=render;
+$('share').onclick=function(){
+  var city=$('city').value,t='URGENT: '+sel+' blood needed'+(city!=='All cities'?' in '+city:'')+'. If you can donate or know a donor, please reply. Please share.';
+  if(navigator.share){navigator.share({text:t}).catch(function(){})}else{window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank','noopener')}
+};
+$('reg').onsubmit=function(e){
+  e.preventDefault();
+  var p=$('rp').value.replace(/\D/g,'').slice(-10);
+  if(p.length!==10){$('saved').textContent='Enter a 10-digit mobile number.';return}
+  mine.push({k:Math.max(0,parseInt($('rk').value)||0),n:$('rn').value.trim(),g:$('rg').value,c:$('rc').value,p:p,d:$('rd').value});
+  try{localStorage.setItem('bdf_donors',JSON.stringify(mine))}catch(x){}
+  $('saved').textContent='Thank you, '+$('rn').value.trim()+'. You’re now listed as a '+$('rg').value+' donor in '+$('rc').value+'.';
+  $('reg').reset();render();
+};
+$('mode').onclick=function(){var r=document.documentElement,d=r.getAttribute('data-theme')?r.getAttribute('data-theme')==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.setAttribute('data-theme',d?'light':'dark')};
+render();
+})();
+</script>
+</body>
+</html>
